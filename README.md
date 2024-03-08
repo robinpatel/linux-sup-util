@@ -1,2 +1,2 @@
 # linux-sup-util
-Executable utilities for general usage on Linux based systems
+Executable utilities for general usage on Linux based systems.
