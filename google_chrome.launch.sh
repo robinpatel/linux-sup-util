@@ -2,7 +2,7 @@
 
 function log_error_and_exit() {
   error_message="${1:-"An unspecified error occurred"}"
-  timestamp=$(date +"%Y-%m-%d %H:%M:%S:%3N")  # Include milliseconds
+  timestamp=$(date +"%Y-%m-%d %H:%M:%S:%3N %z")  # Include milliseconds
   echo "$timestamp - $error_message" >&2 
   exit 1
 }
@@ -30,10 +30,11 @@ while [ "${CHROMEPID_LOOPACTIVE}" == "yes" ] ; do
  CHROMEPID=$(pgrep --newest -f "chrome.* --user-data-dir=.*/google_chrome/profiles/${PROFILENAME}$")
  if [ $? -eq 0 ] ; then
   if (( ${CHROMEPID} )) ; then
-    CHROMEPID_LOOPACTIVE="no"
+   echo "Chrome PID: ${CHROMEPID}"
+   CHROMEPID_LOOPACTIVE="no"
   fi
  fi
-  ((CHROMEPID_LOOPCOUNT+=1))
+ ((CHROMEPID_LOOPCOUNT+=1))
  if [ ${CHROMEPID_LOOPCOUNT} -ge 60 ] ; then
   log_error_and_exit "ERROR: Failed to find CHROMEPID within 60 attempts"
  fi
