@@ -23,7 +23,7 @@ CHROMEPID_LOOPACTIVE="yes"
 while [ "${CHROMEPID_LOOPACTIVE}" == "yes" ] ; do
  CHROMEPID=$(pgrep --newest -f "chrome.* --user-data-dir=.*/google_chrome/profiles/${PROFILENAME}$")
  if [ $? -eq 0 ] ; then
-  if [ (( ${CHROMEPID} )) ] ; then
+  if (( ${CHROMEPID} )) ; then
     CHROMEPID_LOOPACTIVE="no"
   fi
  fi
