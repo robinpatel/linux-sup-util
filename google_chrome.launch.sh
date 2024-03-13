@@ -33,7 +33,7 @@ while [ "${CHROMEPID_LOOPACTIVE}" == "yes" ] ; do
     CHROMEPID_LOOPACTIVE="no"
   fi
  fi
- $((CHROMEPID_LOOPCOUNT++))
+  ((CHROMEPID_LOOPCOUNT+=1))
  if [ ${CHROMEPID_LOOPCOUNT} -ge 60 ] ; then
   log_error_and_exit "ERROR: Failed to find CHROMEPID within 60 attempts"
  fi
