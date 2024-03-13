@@ -2,13 +2,13 @@
 
 function log() {
   MESSAGE="${1:-""}"
-  TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S:%3N %z")
+  TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S:%N %z")
   echo "${TIMESTAMP} - ${MESSAGE}"
 }
 
 function log_error_and_exit() {
   ERROR_MESSAGE="${1:-"An unspecified error occurred"}"
-  TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S:%3N %z")
+  TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S:%N %z")
   echo "$timestamp - $error_message" >&2 
   exit 1
 }
