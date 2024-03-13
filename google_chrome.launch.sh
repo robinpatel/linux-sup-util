@@ -19,17 +19,26 @@ ${CMD} >/dev/null 2>/dev/null &
 
 sleep 1
 
-CHROMEPID=$(pgrep -f "chrome.* --user-data-dir=.*/google_chrome/profiles/${PROFILENAME}$")
+CHROMEPID_LOOPACTIVE="yes"
+while [ "${CHROMEPID_LOOPACTIVE}" == "yes" ] ; do
+ CHROMEPID=$(pgrep --newest -f "chrome.* --user-data-dir=.*/google_chrome/profiles/${PROFILENAME}$")
+ if [ $? -eq 0 ] ; then
+  if [ (( ${CHROMEPID} )) ] ; then
+    CHROMEPID_LOOPACTIVE="no"
+  fi
+ fi
+ sleep 1
+done
 
 TRUEWID=""
-widlist=$(xdotool search --name "Google Chrome")
-for THISWID in ${widlist} ; do
+WIDLIST=$(xdotool search --name "Google Chrome")
+for THISWID in ${WIDLIST} ; do
  THISPID=$(xdotool getwindowpid ${THISWID})
  if [ "${THISPID}"  == "${CHROMEPID}" ] ; then
   echo "Matched WID: ${THISWID}"
   TRUEWID="${THISWID}"
- fi 
-done 
+ fi
+done
 
 if [ "${TRUEWID}" == "" ] ; then
  LOOPACTIVE="no"
