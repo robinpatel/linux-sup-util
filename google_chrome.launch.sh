@@ -40,7 +40,7 @@ while [ "${CHROMEPID_LOOPACTIVE}" == "yes" ] ; do
    CHROMEPID_LOOPACTIVE="no"
   fi
  else
-  
+  log "CHROMEPID checked exit with a non-zero"
  fi
  ((CHROMEPID_LOOPCOUNT+=1))
  if [ ${CHROMEPID_LOOPCOUNT} -ge 60 ] ; then
