@@ -4,7 +4,6 @@ function log() {
   MESSAGE="${1:-""}"
   TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S:%3N %z")
   echo "${TIMESTAMP} - ${MESSAGE}"
-  exit 1
 }
 
 function log_error_and_exit() {
