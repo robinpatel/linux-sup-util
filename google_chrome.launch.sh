@@ -17,8 +17,6 @@ CMD="google-chrome ${GCOPTS} --user-data-dir=${GCPROFILEPATH}"
 echo "${CMD}"
 ${CMD} >/dev/null 2>/dev/null &
 
-sleep 1
-
 CHROMEPID_LOOPACTIVE="yes"
 while [ "${CHROMEPID_LOOPACTIVE}" == "yes" ] ; do
  CHROMEPID=$(pgrep --newest -f "chrome.* --user-data-dir=.*/google_chrome/profiles/${PROFILENAME}$")
