@@ -68,4 +68,3 @@ while [ "${WINDOWNAMING_LOOPACTIVE}" == "yes" ] ; do
  fi
  sleep 1
 done
-
