@@ -41,18 +41,18 @@ for THISWID in ${WIDLIST} ; do
 done
 
 if [ "${TRUEWID}" == "" ] ; then
- LOOPACTIVE="no"
+ WINDOWNAMING_LOOPACTIVE="no"
 else
- LOOPACTIVE="yes"
+ WINDOWNAMING_LOOPACTIVE="yes"
 fi
 
-while [ "${LOOPACTIVE}" == "yes" ] ; do
+while [ "${WINDOWNAMING_LOOPACTIVE}" == "yes" ] ; do
  THISWINDOWNAME=$(xdotool getwindowname ${TRUEWID})
  if [ "${THISWINDOWNAME}" != "${PROFILENAMEDISPLAY}" ] ; then
   echo "Setting WID: ${THISWID} to ${PROFILENAMEDISPLAY}"
   xdotool set_window --name "${PROFILENAMEDISPLAY}" ${TRUEWID}
   if [ $? -ne 0 ] ; then
-   LOOPACTIVE="no"
+   WINDOWNAMING_LOOPACTIVE="no"
   fi
  fi
  sleep 1
