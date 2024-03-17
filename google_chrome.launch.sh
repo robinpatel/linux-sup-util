@@ -50,11 +50,10 @@ while [ "${CHROMEPID_LOOPACTIVE}" == "yes" ] ; do
 done
 
 TRUEWID=""
-WIDLIST=$(xdotool search --name "Google Chrome")
+WIDLIST=$(xdotool search --pid ${CHROMEPID})
 for THISWID in ${WIDLIST} ; do
  THISPID=$(xdotool getwindowpid ${THISWID})
- if [ "${THISPID}"  == "${CHROMEPID}" ] ; then
-  log "Matched WID: ${THISWID}"
+ if [ "${THISPID}" == "${CHROMEPID}" ] ; then
   TRUEWID="${THISWID}"
  fi
 done
@@ -65,10 +64,12 @@ else
  WINDOWNAMING_LOOPACTIVE="yes"
 fi
 
+log "Matched WID: ${TRUEWID}"
+
 while [ "${WINDOWNAMING_LOOPACTIVE}" == "yes" ] ; do
  THISWINDOWNAME=$(xdotool getwindowname ${TRUEWID})
  if [ "${THISWINDOWNAME}" != "${PROFILENAMEDISPLAY}" ] ; then
-  log "Setting WID: ${THISWID} to ${PROFILENAMEDISPLAY}"
+  log "Setting WID: ${TRUEWID} to ${PROFILENAMEDISPLAY}"
   xdotool set_window --name "${PROFILENAMEDISPLAY}" ${TRUEWID}
   if [ $? -ne 0 ] ; then
    WINDOWNAMING_LOOPACTIVE="no"
