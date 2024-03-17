@@ -62,9 +62,8 @@ if [ "${TRUEWID}" == "" ] ; then
  WINDOWNAMING_LOOPACTIVE="no"
 else
  WINDOWNAMING_LOOPACTIVE="yes"
+ log "Matched WID: ${TRUEWID}"
 fi
-
-log "Matched WID: ${TRUEWID}"
 
 while [ "${WINDOWNAMING_LOOPACTIVE}" == "yes" ] ; do
  THISWINDOWNAME=$(xdotool getwindowname ${TRUEWID})
