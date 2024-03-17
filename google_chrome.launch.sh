@@ -52,17 +52,21 @@ done
 TRUEWID=""
 WIDLIST=$(xdotool search --pid ${CHROMEPID})
 for THISWID in ${WIDLIST} ; do
- THISWIDWINDOWNAME=$(xdotool getwindowname ${THISWID})
- if [ "${THISWIDWINDOWNAME}" != "google-chrome" ] ; then
-  log "Matched WID: ${THISWID}"
-  TRUEWID="${THISWID}"
+ if (( ${THISWID} )) ; then
+  THISWIDWINDOWNAME=$(xdotool getwindowname ${THISWID})
+  if [ "${THISWIDWINDOWNAME}" != "google-chrome" ] ; then
+   log "Matched WID: ${THISWID}"
+   TRUEWID=${THISWID}
+  fi
+ else
+  log_error_and_exit "ERROR: WID: ${THISWID} is not an integer"
  fi
 done
 
-if [ "${TRUEWID}" == "" ] ; then
- WINDOWNAMING_LOOPACTIVE="no"
-else
+if (( ${TRUEWID} )) ; then
  WINDOWNAMING_LOOPACTIVE="yes"
+else
+ log_error_and_exit "ERROR: WID: ${TRUEWID} is not an integer"
 fi
 
 while [ "${WINDOWNAMING_LOOPACTIVE}" == "yes" ] ; do
