@@ -52,8 +52,9 @@ done
 TRUEWID=""
 WIDLIST=$(xdotool search --pid ${CHROMEPID})
 for THISWID in ${WIDLIST} ; do
- THISPID=$(xdotool getwindowpid ${THISWID})
- if [ "${THISPID}" == "${CHROMEPID}" ] ; then
+ THISWIDWINDOWNAME=$(xdotool getwindowname ${THISWID})
+ if [ "${THISWIDWINDOWNAME}" != "google-chrome" ] ; then
+  log "Matched WID: ${THISWID}"
   TRUEWID="${THISWID}"
  fi
 done
@@ -62,7 +63,6 @@ if [ "${TRUEWID}" == "" ] ; then
  WINDOWNAMING_LOOPACTIVE="no"
 else
  WINDOWNAMING_LOOPACTIVE="yes"
- log "Matched WID: ${TRUEWID}"
 fi
 
 while [ "${WINDOWNAMING_LOOPACTIVE}" == "yes" ] ; do
