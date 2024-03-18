@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if [[ -n $$ ]] ; then
+ THISPID=$$
+fi
+
 if [[ -n $1 ]] ; then
  PROFILENAME=$1
 fi
@@ -32,7 +36,7 @@ function get_gui_login_time() {
 }
 
 function get_init_delay() {
-  TARGET_DELAY=60
+  TARGET_DELAY=5
   GUI_LOGIN_SECONDS=$(get_gui_login_time)
   TARGET_EPOCH=$((${GUI_LOGIN_SECONDS} + ${TARGET_DELAY}))
   NOW_EPOCH=$(date "+%s")
@@ -79,65 +83,60 @@ function log_error_and_exit() {
   exit 1
 }
 
-function get_lock_status() {
-  THISPID=$$
-  if [[ -z ${THISPID} ]] ; then
-    log_error_and_exit "THISPID is not set"
+function update_lock_file_contents() {
+  THIS_TIMESTAMP=$(date +"%s")
+  if ! (( ${THIS_TIMESTAMP} )) ; then
+    log_error_and_exit "THIS_TIMESTAMP is not an integer"
   fi
   mkdir -p "${LOCAL_METADATA_PATH}"
+  echo -n "${THISPID}:${THIS_TIMESTAMP}" > "${LOCKFILE_PATH}"
+}
+
+function expire_lock() {
   if [[ -f "${LOCKFILE_PATH}" ]] ; then
     LOCKFILE_PID=$(head -n 1 "${LOCKFILE_PATH}" | cut -f 1 -d ':')
     LOCKFILE_TIMESTAMP=$(head -n 1 "${LOCKFILE_PATH}" | cut -f 2 -d ':')
-    EXPIRY_TIMESTAMP=$(date -d "-60 seconds" +"%s")
-    if (( ${LOCKFILE_TIMESTAMP} )) ; then
-      if (( ${EXPIRY_TIMESTAMP} )) ; then
-        if [[ ${LOCKFILE_TIMESTAMP} -le ${EXPIRY_TIMESTAMP} ]] ; then
-          log "Expiring lock file"
-          rm "${LOCKFILE_PATH}"
-          echo -n 'UNLOCKED'
-        else
-          if [[ ${THISPID} -eq ${LOCKFILE_PID} ]] ; then
-            THIS_TIMESTAMP=$(date +"%s")
-            if (( ${THIS_TIMESTAMP} )) ; then
-              echo -n "${THISPID}:${THIS_TIMESTAMP}" > "${LOCKFILE_PATH}"
-              echo -n 'LOCK_UPDATED'
-            else
-              log_error_and_exit "THIS_TIMESTAMP is not an integer"
-            fi
-          else
-            echo -n 'LOCKED'
-          fi
-        fi
-      else
-        log_error_and_exit "EXPIRY_TIMESTAMP is not an integer"
-      fi
-    else
-      log_error_and_exit "Lock file is corrupted: LOCKFILE_TIMESTAMP is not an integer"
+    if ! (( ${LOCKFILE_TIMESTAMP} )) ; then
+      log_error_and_exit "LOCKFILE_TIMESTAMP is not an integer"
     fi
-  else
-    echo -n 'UNLOCKED'
+    EXPIRY_TIMESTAMP=$(date -d "-60 seconds" +"%s")
+    if ! (( ${EXPIRY_TIMESTAMP} )) ; then
+      log_error_and_exit "EXPIRY_TIMESTAMP is not an integer"
+    fi
+    THIS_TIMESTAMP=$(date +"%s")
+    if ! (( ${THIS_TIMESTAMP} )) ; then
+      log_error_and_exit "THIS_TIMESTAMP is not an integer"
+    fi
+    if [[ ${THISPID} -ne ${LOCKFILE_PID} ]] ; then
+      if [[ ${LOCKFILE_TIMESTAMP} -le ${EXPIRY_TIMESTAMP} ]] ; then
+        log "Expiring stale lock for PID:${LOCKFILE_PID}"
+        rm "${LOCKFILE_PATH}"
+      fi
+    fi
   fi
 }
 
-function get_lock() {
-  THISPID=$$
-  if [[ -z ${THISPID} ]] ; then
-    log_error_and_exit "THISPID is not set"
-  fi
-  LOCKSTATUS="$(get_lock_status)"
-  if [[ "${LOCKSTATUS}" == 'UNLOCKED' ]] ; then
-    THIS_TIMESTAMP=$(date +"%s")
-    if (( ${THIS_TIMESTAMP} )) ; then
-      log "Lock granted"
-      echo -n "${THISPID}:${THIS_TIMESTAMP}" > "${LOCKFILE_PATH}"
-      echo -n 'LOCK_GRANTED'
+function update_lock() {
+  if [[ -f "${LOCKFILE_PATH}" ]] ; then
+    LOCKFILE_PID=$(head -n 1 "${LOCKFILE_PATH}" | cut -f 1 -d ':')
+    if [[ ${THISPID} -eq ${LOCKFILE_PID} ]] ; then
+      update_lock_file_contents
+      echo -n 'LOCK_UPDATED'
     else
-      log_error_and_exit "THIS_TIMESTAMP is not an integer"
+      log_error_and_exit "Cannot update lock - THISPID:${THISPID} does not match LOCKFILE_PID:${LOCKFILE_PID}"
     fi
-  elif [[ "${LOCKSTATUS}" == 'LOCK_UPDATED' ]] ; then
-    echo -n 'LOCK_UPDATED'
   else
+    log_error_and_exit "LOCKFILE_PATH is not a valid file, or does not exist"
+  fi
+}
+
+function obtain_lock() {
+  expire_lock
+  if [[ -f "${LOCKFILE_PATH}" ]] ; then
     echo -n 'LOCK_DENIED'
+  else
+    update_lock_file_contents
+    echo -n 'LOCK_GRANTED'
   fi
 }
 
@@ -164,6 +163,24 @@ function release_lock() {
   fi
 }
 
+function update_window_name_if_needed() {
+  WID="$1"
+  WINDOW_NAME="$2"
+  THIS_WINDOW_NAME=$(xdotool getwindowname ${WID})
+  if [[ "${WINDOW_NAME}" != "${THIS_WINDOW_NAME}" ]] ; then
+    log "WID:${WID} - Setting window name to ${WINDOW_NAME}"
+    xdotool set_window --name "${WINDOW_NAME}" ${WID} 2>/dev/null
+    if [[ $? -ne 0 ]] ; then
+      return 1
+    fi
+  fi
+  return 0
+}
+
+if [[ -z "${THISPID}" ]] ; then
+  log_error_and_exit "THISPID is not set"
+fi
+
 if [[ -z "${PROFILENAME}" ]] ; then
  log_error_and_exit "Variable PROFILENAME is not provided"
 fi
@@ -182,7 +199,9 @@ if [[ -n "${PROFILEMODE}" ]] ; then
  fi
 fi
 
-if [[ $(get_lock) != 'LOCK_GRANTED' ]] ; then
+if [[ $(obtain_lock) == 'LOCK_GRANTED' ]] ; then
+  log "Lock granted"
+else
   log_error_and_exit "Cannot obtain lock on start of process"
 fi
 
@@ -230,55 +249,55 @@ while [[ "${CHROMEPID_LOOPACTIVE}" == "yes" ]] ; do
   sleep 1
 done
 
-TRUEWID=""
+WID=""
 WIDLIST=$(xdotool search --pid ${CHROMEPID})
 for THISWID in ${WIDLIST} ; do
   if (( ${THISWID} )) ; then
     THISWIDWINDOWNAME=$(xdotool getwindowname ${THISWID})
     log "Checking WID: ${THISWID} (${THISWIDWINDOWNAME})"
     if [[ "${THISWIDWINDOWNAME}" != "google-chrome" ]] ; then
-    log "Matched WID: ${THISWID}"
-    TRUEWID=${THISWID}
+      log "Matched WID: ${THISWID}"
+      WID=${THISWID}
     fi
   else
     log_error_and_exit "WID from WIDLIST is not an integer (THISWID:${THISWID})"
   fi
 done
 
-if (( ${TRUEWID} )) ; then
+if (( ${WID} )) ; then
   log "Setting Window Naming Monitor to ACTIVE"
   WINDOWNAMING_LOOPACTIVE="yes"
 else
-  log_error_and_exit "WID is not an integer (TRUEWID:${TRUEWID})"
+  log_error_and_exit "WID is not an integer (WID:${WID})"
 fi
 
-THISWINDOWNAME=$(xdotool getwindowname ${TRUEWID})
+THISWINDOWNAME=$(xdotool getwindowname ${WID})
 while [[ "${WINDOWNAMING_LOOPACTIVE}" == "yes" ]] ; do
   NOWEPOCHTIME=$(date +"%s")
   if [[ ${NOWEPOCHTIME} -ge ${EARLIEST_TIME_TO_UPDATE_LOCK} ]] ; then
-    if [[ "$(get_lock)" != 'LOCK_UPDATED' ]] ; then
-      log_error_and_exit "Cannot updated lock"
+    expire_lock
+    if [[ "$(update_lock)" != 'LOCK_UPDATED' ]] ; then
+      log_error_and_exit "Cannot update lock"
     else
       EARLIEST_TIME_TO_UPDATE_LOCK=$(date -d "+15 seconds" +"%s")
     fi
   fi
   THISWINDOWNAMEPREVIOUS="${THISWINDOWNAME}"
-  THISWINDOWNAME=$(xdotool getwindowname ${TRUEWID} 2>/dev/null)
+  THISWINDOWNAME=$(xdotool getwindowname ${WID} 2>/dev/null)
   if [[ $? -ne 0 ]] ; then
     WINDOWNAMING_LOOPACTIVE="no"
     READYTOSET="no"
   fi
   if [[ "${WINDOWNAMING_LOOPACTIVE}" == "yes" && "${THISWINDOWNAME}" != "${THISWINDOWNAMEPREVIOUS}" && "${THISWINDOWNAME}" != "" ]] ; then
-    log "Window Name: ${THISWINDOWNAME}"
+    log "WID:${WID} - Window Name: ${THISWINDOWNAME}"
   fi
   if [[ "${THISWINDOWNAME}" != "${PROFILENAMEDISPLAY}" && "${THISWINDOWNAME}" == "${THISWINDOWNAMEPREVIOUS}" ]] ; then
     if [[ "${READYTOSET}" == "yes" ]] ; then
-    log "Setting WID: ${TRUEWID} to ${PROFILENAMEDISPLAY}"
-    xdotool set_window --name "${PROFILENAMEDISPLAY}" ${TRUEWID} 2>/dev/null || WINDOWNAMING_LOOPACTIVE="no"
+      update_window_name_if_needed ${WID} "${PROFILENAMEDISPLAY}" || WINDOWNAMING_LOOPACTIVE="no"
     fi
     NOWEPOCHTIME=$(date +"%s")
     if [[ ${NOWEPOCHTIME} -ge ${EARLIESTTIMETOSET} ]] ; then
-    READYTOSET="yes"
+      READYTOSET="yes"
     fi
   else
     EARLIESTTIMETOSET=$(date -d "+10 seconds" +"%s")
